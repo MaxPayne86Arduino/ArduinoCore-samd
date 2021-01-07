@@ -50,6 +50,8 @@ class TwoWire : public HardwareI2C
 
     size_t write(uint8_t data);
     size_t write(const uint8_t * data, size_t quantity);
+    size_t writeBlock(const uint8_t * data, size_t quantity);
+    size_t writeBlock(const uint8_t * data, size_t quantity, uint16_t internalAddress);
 
     virtual int available(void);
     virtual int read(void);
@@ -79,6 +81,10 @@ class TwoWire : public HardwareI2C
     //TX buffer
     arduino::RingBufferN<256> txBuffer;
     uint8_t txAddress;
+
+    uint16_t txWriteRomIndex;
+    uint16_t txWriteRomQuantity;
+    const uint8_t *PtrTxRomBuffer;
 
     // Callback user functions
     void (*onRequestCallback)(void);

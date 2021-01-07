@@ -135,7 +135,7 @@ uint8_t TwoWire::endTransmission(bool stopBit)
     return 2 ;  // Address error
   }
 
-  // Send all buffer
+  // Send all buffer in ram
   while( txBuffer.available() )
   {
     // Trying to send data
@@ -144,6 +144,23 @@ uint8_t TwoWire::endTransmission(bool stopBit)
       sercom->prepareCommandBitsWire(WIRE_MASTER_ACT_STOP);
       return 3 ;  // Nack or error
     }
+  }
+
+  if( txWriteRomQuantity != 0 ) // Send block data if any
+  {
+    while( txWriteRomIndex != txWriteRomQuantity )
+    {
+      uint8_t c = *PtrTxRomBuffer++;
+      if ( !sercom->sendDataMasterWIRE( c ) )
+      {
+        sercom->prepareCommandBitsWire(WIRE_MASTER_ACT_STOP);
+        txWriteRomQuantity=0;
+        return 3 ;  // Nack or error
+      }
+      else
+        txWriteRomIndex++;
+    }
+    txWriteRomQuantity=0;
   }
   
   if (stopBit)
@@ -184,6 +201,27 @@ size_t TwoWire::write(const uint8_t *data, size_t quantity)
 
   //All data stored
   return quantity;
+}
+
+size_t TwoWire::writeBlock(const uint8_t *data, size_t quantity) {
+
+  txWriteRomIndex = 0;
+  txWriteRomQuantity = quantity;
+  PtrTxRomBuffer = data;
+
+  return quantity;
+}
+
+size_t TwoWire::writeBlock(const uint8_t *data, size_t quantity, uint16_t internalAddress) {
+  uint8_t MSB = 0x00, LSB = 0x00;
+
+  MSB = (uint8_t)((internalAddress>>8)&0xFF);
+  LSB = (uint8_t)(internalAddress&0xFF);
+
+  write(MSB);
+  write(LSB);
+
+  return writeBlock(data, quantity) + 2;
 }
 
 int TwoWire::available(void)
